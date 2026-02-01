@@ -1,38 +1,38 @@
 const mineflayer = require('mineflayer')
 
-const botArgs = {
-  host: 'highways.aternos.me',
-  username: 'mshmsh',
-  version: '1.21.1',
-  skipValidation: true // يساعد في تخطي مشاكل الدخول غير الرسمي
+const botOptions = {
+    host: 'highways.aternos.me', // جرب الـ DynIP هنا إذا استمر الخطأ
+    username: 'mshmsh',
+    version: '1.21.1',
+    checkTimeoutInterval: 60000, // زيادة وقت انتظار الاستجابة لـ 60 ثانية
+    auth: 'offline' // التأكيد على الدخول بدون حساب رسمي
+};
+
+function startBot() {
+    const bot = mineflayer.createBot(botOptions);
+
+    bot.on('login', () => {
+        console.log('✅ مشمش: تم تسجيل الدخول!');
+    });
+
+    bot.on('spawn', () => {
+        console.log('🚀 مشمش: أنا الآن داخل السيرفر!');
+        bot.chat('مشمش وصل يا شباب!');
+    });
+
+    bot.on('error', (err) => {
+        if (err.code === 'ECONNRESET') {
+            console.log('⚠️ السيرفر رفض الاتصال (ECONNRESET). جاري إعادة المحاولة بعد 10 ثوانٍ...');
+        } else {
+            console.log('❌ خطأ آخر:', err.message);
+        }
+        setTimeout(startBot, 10000); // إعادة محاولة ذكية
+    });
+
+    bot.on('end', () => {
+        console.log('📉 انقطع الاتصال، سأحاول العودة قريباً...');
+        setTimeout(startBot, 10000);
+    });
 }
 
-function createBot() {
-  const bot = mineflayer.createBot(botArgs)
-
-  bot.on('login', () => {
-    console.log('مشمش سجل دخوله بنجاح!')
-  })
-
-  bot.on('spawn', () => {
-    console.log('مشمش الآن داخل العالم!')
-    bot.chat('أنا مشمش، لا أحد يطردني!')
-  })
-
-  // في حال حدث خطأ ECONNRESET، سيحاول البوت إعادة التشغيل بعد 5 ثوانٍ
-  bot.on('error', (err) => {
-    if (err.code === 'ECONNRESET') {
-      console.log('السيرفر قطع الاتصال، سأحاول العودة بعد 5 ثوانٍ...')
-      setTimeout(createBot, 5000)
-    } else {
-      console.log('خطأ غير متوقع: ', err.message)
-    }
-  })
-
-  bot.on('end', () => {
-    console.log('انفصل الاتصال، جاري إعادة المحاولة...')
-    setTimeout(createBot, 5000)
-  })
-}
-
-createBot()
+startBot();
