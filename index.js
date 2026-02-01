@@ -10,66 +10,60 @@ const bot = mineflayer.createBot({
   skipValidation: true
 })
 
-// تحميل مكتبة التحرك الذكي
+// تحميل مكتبة التحرك
 bot.loadPlugin(pathfinder)
 
 bot.on('spawn', () => {
-  console.log('مشمش الآن يتفاعل في السيرفر!')
-  bot.chat('أنا مشمش! جاهز للتمشي، من يريدني أن ألحقه؟')
+  const mcData = require('minecraft-data')(bot.version)
+  const defaultMovements = new Movements(bot, mcData)
+  bot.pathfinder.setMovements(defaultMovements)
+  
+  console.log('مشمش جاهز للتفاعل الآن!')
+  bot.chat('أنا مشمش! اكتب "تعال" لألحقك أو "هلا" للتحية.')
 })
 
-// التفاعل مع الشات والأوامر
+// التفاعل مع الشات
 bot.on('chat', (username, message) => {
   if (username === bot.username) return
 
-  const target = bot.players[username]?.entity
-
-  // أمر اللحاق باللاعب
-  if (message === 'تعال') {
-    if (!target) {
-      bot.chat('لا أراك يا ' + username + '، اقترب مني قليلاً!')
-      return
-    }
-    const mcData = require('minecraft-data')(bot.version)
-    const movements = new Movements(bot, mcData)
-    
-    bot.pathfinder.setMovements(movements)
-    bot.pathfinder.setGoal(new GoalFollow(target, 2), true) // سيلحقك ويقف على بعد بلوكتين
-    bot.chat('أنا قادم إليك!')
-  }
-
-  // أمر التوقف
-  if (message === 'وقف') {
-    bot.pathfinder.setGoal(null)
-    bot.chat('حاضر، سأبقى هنا.')
-  }
-
   // التفاعل مع التحية
   if (message.includes('هلا') || message.includes('هاي')) {
-    bot.chat('أهلاً بك يا ' + username + '! كيف حالك؟')
+    bot.chat(`هلا والله يا ${username}! كيف حالك؟`)
+    bot.setControlState('jump', true) // يقفز كعلامة ترحيب
+    setTimeout(() => bot.setControlState('jump', false), 500)
+  }
+
+  // ميزة اللحاق باللاعب
+  if (message === 'تعال') {
+    const player = bot.players[username]
+    if (!player || !player.entity) {
+      bot.chat('ما أقدر أشوفك، لازم تكون قريب مني!')
+      return
+    }
+
+    const mcData = require('minecraft-data')(bot.version)
+    const movements = new Movements(bot, mcData)
+    bot.pathfinder.setMovements(movements)
+    
+    // اللحاق باللاعب مع تجنب العقبات
+    bot.pathfinder.setGoal(new GoalFollow(player.entity, 2), true)
+    bot.chat('جاي أركض وراك!')
+  }
+
+  // التوقف
+  if (message === 'وقف') {
+    bot.pathfinder.setGoal(null)
+    bot.chat('تم، توقفت.')
   }
 })
 
-// حركات عشوائية ليبدو كلاعب حقيقي (Anti-AFK)
+// حركات عشوائية ليبدو حياً (التفات الرأس)
 bot.on('physicTick', () => {
-  // القفز بشكل عشوائي كل فترة
-  if (Math.random() < 0.01) {
-    bot.setControlState('jump', true)
-    setTimeout(() => bot.setControlState('jump', false), 100)
-  }
-  
-  // الالتفات حوله ليبدو كأنه يستكشف
-  if (Math.random() < 0.05) {
-    const yaw = Math.random() * Math.PI * 2
-    const pitch = (Math.random() - 0.5) * Math.PI
+  if (Math.random() < 0.02) { // التفات عشوائي كل فترة
+    const yaw = bot.entity.yaw + (Math.random() - 0.5) * 2
+    const pitch = (Math.random() - 0.5) * 1
     bot.look(yaw, pitch, false)
   }
 })
 
-// التعامل مع الموت (يعود لمكانه عند الـ Spawn)
-bot.on('death', () => {
-  bot.chat('أوه، لقد مت! سأعود قريباً.')
-})
-
 bot.on('error', (err) => console.log('خطأ:', err.message))
-bot.on('end', () => console.log('انفصل الاتصال'))
